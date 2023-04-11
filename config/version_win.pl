@@ -235,9 +235,9 @@ for ($j = 1; $j < 4; $j++)
 my $winappversion = "$appver[0],$appver[1],$appver[2],$appver[3]";
 
 my $copyright = "License: MPL 2.0";
-my $company = "UXP Contributors";
-my $trademarks = "Goanna is (tm) Moonchild Productions";
-my $productname = "UXP";
+my $company = "Aura Contributors";
+my $trademarks = "A.R.E. is (tm) BinOC";
+my $productname = "Aura Runtime Environment";
 
 
 if (defined($override_comment)){$override_comment =~ s/\@MOZ_APP_DISPLAYNAME\@/$displayname/g; $comment=$override_comment;}

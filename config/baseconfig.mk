@@ -52,5 +52,6 @@ endif
 ifdef MOZILLA_SRCDIR
   MOZILLA_DIR = $(MOZILLA_SRCDIR)
 else
+  MOZILLA_SRCDIR = $(topsrcdir)
   MOZILLA_DIR = $(topsrcdir)
 endif
