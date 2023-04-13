@@ -19,3 +19,4 @@ if not CONFIG['MOZ_INCOMPLETE_EXTERNAL_LINKAGE']:
 
 DEFFILE = SRCDIR + '/MapiProxy.def'
 
+LOCAL_INCLUDES += ['/mailnews/mapi/include']

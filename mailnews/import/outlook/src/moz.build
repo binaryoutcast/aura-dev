@@ -18,6 +18,7 @@ SOURCES += [
 FINAL_LIBRARY = 'import'
 
 LOCAL_INCLUDES += [
-    '../../src'
+    '../../src',
+    '/mailnews/mapi/include'
 ]
 

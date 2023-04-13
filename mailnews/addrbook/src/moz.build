@@ -89,4 +89,6 @@ EXTRA_PP_COMPONENTS += [
     'nsAddrbook.manifest',
 ]
 
+LOCAL_INCLUDES += ['/mailnews/mapi/include']
+
 FINAL_LIBRARY = 'mail'

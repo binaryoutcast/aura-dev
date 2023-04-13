@@ -233,13 +233,6 @@ NS_IMETHODIMP nsMessenger::SetWindow(mozIDOMWindowProxy *aWin, nsIMsgWindow *aMs
     do_GetService(NS_MSGMAILSESSION_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  // Remove the folder listener if we added it, i.e. if mWindow is non-null
-  if (mWindow)
-  {
-    rv = mailSession->RemoveFolderListener(this);
-    NS_ENSURE_SUCCESS(rv, rv);
-  }
-
   if (aWin)
   {
     mMsgWindow = aMsgWindow;
@@ -278,6 +271,13 @@ NS_IMETHODIMP nsMessenger::SetWindow(mozIDOMWindowProxy *aWin, nsIMsgWindow *aMs
   } // if aWin
   else
   {
+    // Remove the folder listener if we added it, i.e. if mWindow is non-null
+    if (mWindow)
+    {
+      rv = mailSession->RemoveFolderListener(this);
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
+
     mWindow = nullptr;
   }
 
@@ -698,7 +698,6 @@ nsresult nsMessenger::SaveAttachment(nsIFile *aFile,
       saveListener->QueryInterface(NS_GET_IID(nsIStreamListener),
                                  getter_AddRefs(convertedListener));
 
-#ifndef XP_MACOSX
       // if the content type is bin hex we are going to do a hokey hack and make sure we decode the bin hex
       // when saving an attachment to disk..
       if (MsgLowerCaseEqualsLiteral(aContentType, APPLICATION_BINHEX))
@@ -713,7 +712,6 @@ nsresult nsMessenger::SaveAttachment(nsIFile *aFile,
                                                       channelSupport,
                                                       getter_AddRefs(convertedListener));
       }
-#endif
       nsCOMPtr<nsIURI> dummyNull;
       if (fetchService)
         rv = fetchService->FetchMimePart(URL, fullMessageUri.get(),
@@ -771,10 +769,6 @@ nsMessenger::SaveAttachmentToFolder(const nsACString& contentType, const nsACStr
   ConvertAndSanitizeFileName(PromiseFlatCString(displayName).get(), unescapedFileName);
   rv = attachmentDestination->Append(unescapedFileName);
   NS_ENSURE_SUCCESS(rv, rv);
-#ifdef XP_MACOSX
-  rv = attachmentDestination->CreateUnique(nsIFile::NORMAL_FILE_TYPE, ATTACHMENT_PERMISSION);
-  NS_ENSURE_SUCCESS(rv, rv);
-#endif
 
   rv = SaveAttachment(attachmentDestination, url, messageUri, contentType, nullptr, nullptr);
   attachmentDestination.swap(*aOutFile);
