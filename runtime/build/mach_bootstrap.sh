@@ -10,6 +10,8 @@ if [[ -z "$1" ]]; then
   exit 1
 fi
 
+# ---------------------------------------------------------------------------------------------------------------------
+
 XMACH_GIT=`which git 2>/dev/null`
 XMACH_CURL=`which curl 2>/dev/null`
 
@@ -21,6 +23,8 @@ if [[ -z "$XMACH_PYTHON" ]]; then
   exit 1
 fi
 
+# ---------------------------------------------------------------------------------------------------------------------
+
 # Determine the current OS
 # This will also be exported so it can be picked up by .mozconfig
 XMACH_TARGET_OS=`uname | tr [:upper:] [:lower:]`
@@ -29,7 +33,7 @@ if [[ "$XMACH_TARGET_OS" == "mingw32_nt-"* ]]; then
   XMACH_TARGET_OS=winnt
 fi
 
-export _BUILD_TARGET_OS=$XMACH_TARGET_OS
+export XMACH_TARGET_OS=$XMACH_TARGET_OS
 
 # =====================================================================================================================
 
@@ -40,6 +44,8 @@ xmach_check_git() {
   fi
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+
 xmach_check_curl() {
   if [ -z "$XMACH_CURL" ]; then
     printf "Error: curl not found in your path."
@@ -49,12 +55,14 @@ xmach_check_curl() {
 
 # =====================================================================================================================
 
-cmd_gitcow() {
+xmach_cmd_gitcow() {
   xmach_check_git
   printf "Git.. with Cow!"
 }
 
-cmd_gitpatch() {
+# ---------------------------------------------------------------------------------------------------------------------
+
+xmach_cmd_gitpatch() {
   xmach_check_git
 
   if [ -z "$1" ]; then
@@ -87,11 +95,15 @@ cmd_gitpatch() {
   fi
 }
 
-cmd_v2k() {
+# ---------------------------------------------------------------------------------------------------------------------
+
+xmach_cmd_v2k() {
   $XMACH_PYTHON ./runtime/build/version2k.py ${@:2}
 }
 
-cmd_release() {
+# ---------------------------------------------------------------------------------------------------------------------
+
+xmach_cmd_release() {
   $XMACH_PYTHON mach build && $XMACH_PYTHON mach package && $XMACH_PYTHON mach mar
 
   if [[ "$XMACH_TARGET_OS" == "winnt" ]]; then
@@ -99,7 +111,9 @@ cmd_release() {
   fi
 }
 
-cmd_localbuild() {
+# ---------------------------------------------------------------------------------------------------------------------
+
+xmach_cmd_localbuild() {
   $XMACH_PYTHON mach build || exit 1
   if [[ "$XMACH_TARGET_OS" == "winnt" ]]; then
     $XMACH_PYTHON mach installer && $XMACH_PYTHON mach install
@@ -111,12 +125,10 @@ cmd_localbuild() {
 # =====================================================================================================================
 
 if [[ "$1" == "-c" ]] || [[ "$1" == "--command" ]]; then
-  "cmd_${@:2}"
+  "xmach_cmd_${@:2}"
   exit 0
 fi
 
-# =====================================================================================================================
+# ---------------------------------------------------------------------------------------------------------------------
 
 # Fallthrough to Mozilla Mach...
-
-# =====================================================================================================================
