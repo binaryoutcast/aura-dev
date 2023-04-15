@@ -46,8 +46,8 @@ include('build/moz.configure/warnings.configure',
 
 include(include_project_configure)
 
-# Supported build back-ends: RecursiveMake and FasterMake
-set_config('BUILD_BACKENDS', tuple(['RecursiveMake', 'FasterMake']))
+# We only support one build-backend, namely RecursiveMake.
+set_config('BUILD_BACKENDS', tuple(['RecursiveMake']))
 
 
 # Awk detection
