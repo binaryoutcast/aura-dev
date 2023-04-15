@@ -113,7 +113,9 @@ def config_status(topobjdir='.', topsrcdir='.', defines=None,
     log_manager.add_terminal_logging(level=log_level)
     log_manager.enable_unstructured()
 
+
     STATUS_MESSAGES = [
+        'Reticulating splines',
         'Walking the dog',
         'Feeding the hatchlings',
         'Pressing play on tape',
@@ -125,7 +127,8 @@ def config_status(topobjdir='.', topsrcdir='.', defines=None,
         'Consulting the manual',
         'Brewing coffee',
         'Inserting coin',
-        'Deriving optimal formula',
+        'What? Hold on',
+        'Zilling the moz',
     ]
 
     print('{0}...'.format(random.choice(STATUS_MESSAGES)), file=sys.stderr)
