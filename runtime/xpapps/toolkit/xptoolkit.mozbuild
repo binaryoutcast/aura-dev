@@ -15,4 +15,4 @@ if CONFIG['MOZ_CALENDAR']:
         '/calendar/timezones'
     ]
 
-DIRS += ['/runtime/xptoolkit']
+DIRS += ['/runtime/xpapps/toolkit']
