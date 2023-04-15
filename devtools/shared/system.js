@@ -110,7 +110,8 @@ function* getSystemInfo() {
 
     // The application's version, for example "0.8.0+" or "3.7a1pre".
     // Typically, the version of Firefox, for example.
-    // It is different than the version of the platform.
+    // It is different than the version of Gecko or the XULRunner platform.
+    // On B2G, this is the Gaia version.
     version,
 
     // The application's build ID/date, for example "2004051604".
