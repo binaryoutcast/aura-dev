@@ -248,7 +248,7 @@ Section "-InstallStartCleanup"
   ${EndIf}
 
   ; setup the application model id registration value
-  ${InitHashAppModelId} "$INSTDIR" "Software\Binary Outcast\${AppName}\TaskBarIDs"
+  ${InitHashAppModelId} "$INSTDIR" "Software\BinOC\${AppName}\TaskBarIDs"
 
   ; Remove the updates directory for Vista and above
   ${CleanUpdateDirectories} "Mozilla\Mariner" "Mozilla\updates"
@@ -572,7 +572,7 @@ Section "-InstallEndCleanup"
       ; If we have something other than empty string now, write the value.
       ${If} "$0" != ""
         ClearErrors
-        WriteRegStr HKCU "Software\Binary Outcast\Mariner" "OldDefaultBrowserCommand" "$0"
+        WriteRegStr HKCU "Software\BinOC\Mariner" "OldDefaultBrowserCommand" "$0"
       ${EndIf}
 
       ${LogHeader} "Setting as the default browser"
@@ -588,7 +588,7 @@ Section "-InstallEndCleanup"
     ${ElseIfNot} ${Errors}
       ${LogHeader} "Writing default-browser opt-out"
       ClearErrors
-      WriteRegStr HKCU "Software\Binary Outcast\Mariner" "DefaultBrowserOptOut" "True"
+      WriteRegStr HKCU "Software\BinOC\Mariner" "DefaultBrowserOptOut" "True"
       ${If} ${Errors}
         ${LogMsg} "Error writing default-browser opt-out"
       ${EndIf}

@@ -34,7 +34,7 @@
   ${UpdateProtocolHandlers}
 
   ; setup the application model id registration value
-  ${InitHashAppModelId} "$INSTDIR" "Software\Binary Outcast\${AppName}\TaskBarIDs"
+  ${InitHashAppModelId} "$INSTDIR" "Software\BinOC\${AppName}\TaskBarIDs"
 
   ; Win7 taskbar and start menu link maintenance
   Call FixShortcutAppModelIDs
@@ -436,7 +436,7 @@
 !macroend
 !define FixShellIconHandler "!insertmacro FixShellIconHandler"
 
-; Add Software\Binary Outcast\ registry entries (uses SHCTX).
+; Add Software\BinOC\ registry entries (uses SHCTX).
 !macro SetAppKeys
   ; Check if this is an ESR release and if so add registry values so it is
   ; possible to determine that this is an ESR install (bug 726781).
@@ -449,14 +449,14 @@
   ${EndIf}
 
   ${GetLongPath} "$INSTDIR" $8
-  StrCpy $0 "Software\Binary Outcast\${BrandFullNameInternal}\${AppVersion}$3 (${ARCH} ${AB_CD})\Main"
+  StrCpy $0 "Software\BinOC\${BrandFullNameInternal}\${AppVersion}$3 (${ARCH} ${AB_CD})\Main"
   ${WriteRegStr2} $TmpVal "$0" "Install Directory" "$8" 0
   ${WriteRegStr2} $TmpVal "$0" "PathToExe" "$8\${FileMainEXE}" 0
 
-  StrCpy $0 "Software\Binary Outcast\${BrandFullNameInternal}\${AppVersion}$3 (${ARCH} ${AB_CD})\Uninstall"
+  StrCpy $0 "Software\BinOC\${BrandFullNameInternal}\${AppVersion}$3 (${ARCH} ${AB_CD})\Uninstall"
   ${WriteRegStr2} $TmpVal "$0" "Description" "${BrandFullNameInternal} ${AppVersion}$3 (${ARCH} ${AB_CD})" 0
 
-  StrCpy $0 "Software\Binary Outcast\${BrandFullNameInternal}\${AppVersion}$3 (${ARCH} ${AB_CD})"
+  StrCpy $0 "Software\BinOC\${BrandFullNameInternal}\${AppVersion}$3 (${ARCH} ${AB_CD})"
   ${WriteRegStr2} $TmpVal  "$0" "" "${AppVersion}$3 (${ARCH} ${AB_CD})" 0
   ${If} "$3" == ""
     DeleteRegValue SHCTX "$0" "ESR"
@@ -464,14 +464,14 @@
     ${WriteRegDWORD2} $TmpVal "$0" "ESR" 1 0
   ${EndIf}
 
-  StrCpy $0 "Software\Binary Outcast\${BrandFullNameInternal} ${AppVersion}$3\bin"
+  StrCpy $0 "Software\BinOC\${BrandFullNameInternal} ${AppVersion}$3\bin"
   ${WriteRegStr2} $TmpVal "$0" "PathToExe" "$8\${FileMainEXE}" 0
 
-  StrCpy $0 "Software\Binary Outcast\${BrandFullNameInternal} ${AppVersion}$3\extensions"
+  StrCpy $0 "Software\BinOC\${BrandFullNameInternal} ${AppVersion}$3\extensions"
   ${WriteRegStr2} $TmpVal "$0" "Components" "$8\components" 0
   ${WriteRegStr2} $TmpVal "$0" "Plugins" "$8\plugins" 0
 
-  StrCpy $0 "Software\Binary Outcast\${BrandFullNameInternal} ${AppVersion}$3"
+  StrCpy $0 "Software\BinOC\${BrandFullNameInternal} ${AppVersion}$3"
   ${WriteRegStr2} $TmpVal "$0" "GeckoVer" "${GREVersion}" 0
   ${If} "$3" == ""
     DeleteRegValue SHCTX "$0" "ESR"
@@ -479,7 +479,7 @@
     ${WriteRegDWORD2} $TmpVal "$0" "ESR" 1 0
   ${EndIf}
 
-  StrCpy $0 "Software\Binary Outcast\${BrandFullNameInternal}$3"
+  StrCpy $0 "Software\BinOC\${BrandFullNameInternal}$3"
   ${WriteRegStr2} $TmpVal "$0" "" "${GREVersion}" 0
   ${WriteRegStr2} $TmpVal "$0" "CurrentVersion" "${AppVersion}$3 (${ARCH} ${AB_CD})" 0
 !macroend

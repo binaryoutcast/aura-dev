@@ -193,7 +193,7 @@ Section "Uninstall"
   ${EndIf}
 
   ; setup the application model id registration value
-  ${un.InitHashAppModelId} "$INSTDIR" "Software\Binary Outcast\${AppName}\TaskBarIDs"
+  ${un.InitHashAppModelId} "$INSTDIR" "Software\BinOC\${AppName}\TaskBarIDs"
 
   SetShellVarContext current  ; Set SHCTX to HKCU
   ${un.RegCleanMain} "Software\Mozilla"
@@ -210,8 +210,8 @@ Section "Uninstall"
   ${un.CleanUpdateDirectories} "Mozilla\Mariner" "Mozilla\updates"
 
   ; Remove any app model id's stored in the registry for this install path
-  DeleteRegValue HKCU "Software\Binary Outcast\${AppName}\TaskBarIDs" "$INSTDIR"
-  DeleteRegValue HKLM "Software\Binary Outcast\${AppName}\TaskBarIDs" "$INSTDIR"
+  DeleteRegValue HKCU "Software\BinOC\${AppName}\TaskBarIDs" "$INSTDIR"
+  DeleteRegValue HKLM "Software\BinOC\${AppName}\TaskBarIDs" "$INSTDIR"
 
   ClearErrors
   WriteRegStr HKLM "Software\Mozilla" "${BrandShortName}InstallerTest" "Write Test"
@@ -396,7 +396,7 @@ Section "Uninstall"
   ; subsequently deleted after checking. If the value is found during startup
   ; the browser will offer to Reset Mariner. We use the UpdateChannel to match
   ; uninstalls of Mariner-release with reinstalls of Mariner-release, for example.
-  WriteRegStr HKCU "Software\Binary Outcast\Mariner" "Uninstalled-${UpdateChannel}" "True"
+  WriteRegStr HKCU "Software\BinOC\Mariner" "Uninstalled-${UpdateChannel}" "True"
 
   ${un.IsFirewallSvcRunning}
   Pop $0
