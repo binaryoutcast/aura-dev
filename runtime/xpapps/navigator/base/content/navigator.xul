@@ -176,8 +176,10 @@
              defaultset="menubar-items"
              mode="full"
              iconsize="small"
+             labelalign="end"
              defaultmode="full"
              defaulticonsize="small"
+             defaultlabelalign="end"
              context="toolbar-context-menu">
       <toolbaritem id="menubar-items" class="menubar-items" align="center">
         <menubar id="main-menubar"/>
@@ -188,12 +190,12 @@
              grippytooltiptext="&navigationToolbar.tooltip;"
              fullscreentoolbar="true" customizable="true"
              toolbarname="&navbarCmd.label;" accesskey="&navbarCmd.accesskey;"
-             defaultset="back-button,forward-button,reload-button,stop-button,nav-bar-inner,search-container,throbber-box,window-controls"
+             defaultset="back-button,forward-button,reload-button,stop-button,nav-bar-inner,go-button-container,search-button-container,window-controls"
              mode="full"
-             iconsize="large"
+             iconsize="small"
              labelalign="end"
              defaultmode="full"
-             defaulticonsize="large"
+             defaulticonsize="small"
              defaultlabelalign="end"
              context="toolbar-context-menu">
 
@@ -497,7 +499,9 @@
                     onbookmarktab="PlacesCommandHook.bookmarkCurrentPage(false, PlacesUtils.bookmarksMenuFolderId);"
                     onbookmarkgroup="PlacesCommandHook.bookmarkCurrentPages();"
                     oncontentclick="return contentAreaClick(event);"
-                    oncommand="BrowserOnCommand(event);"/>
+                    oncommand="BrowserOnCommand(event);"
+                    >
+        </tabbrowser>
         <!-- The oncommand listener above lets us fix bugs like 401575 which
              require error page UI to do privileged things, without letting
              error pages have any privilege themselves. -->

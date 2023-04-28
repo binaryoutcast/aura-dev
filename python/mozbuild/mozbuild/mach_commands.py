@@ -539,21 +539,21 @@ class Build(MachCommandBase):
                 pass
 
         # Check for un-preprocessed files.. In case something goes wrong it will be noted
-        ppcheck_script = mozpath.join(self.topsrcdir, "build", "ppCheck.py")
-        ppcheck_path = mozpath.join(self.topobjdir, "dist", "bin")
-        if not os.path.exists(ppcheck_script):
-            ppcheck_script = mozpath.join(self.topsrcdir, "mozilla", "build", "ppCheck.py")
+        ppcheck_script = False
 
-        if not os.path.exists(ppcheck_script):
-            ppcheck_script = mozpath.join(self.topsrcdir, "platform", "build", "ppCheck.py")
-        else:
-            ppcheck_script = None
-        
+        for ppcheck_moz_path in ['mozilla', 'platform', 'allazom', '']:
+            ppcheck_script_path = mozpath.join(self.topsrcdir, ppcheck_moz_path, "build", "ppCheck.py")
+            if not os.path.exists(ppcheck_script_path):
+                continue
+
+            ppcheck_script = ppcheck_script_path
+            break
+
         if ppcheck_script:
-            ppcheck_cmd = [which.which("python2.7"), ppcheck_script, ppcheck_path]
+            ppcheck_cmd = [which.which("python2.7"), ppcheck_script, mozpath.join(self.topobjdir, "dist", "bin")]
             ppcheck_result = subprocess.call(ppcheck_cmd, cwd=self.topsrcdir)
-        
-        if not ppcheck_script or ppcheck_result: 
+
+        if ppcheck_result != 0: 
             print("\nWARNING: Something has gone wrong with the check for un-preprocessed files. " +
                   "Please manually verify that files are properly preprocessed.")
 
