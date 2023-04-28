@@ -490,6 +490,7 @@ panel[nomatch="true"] > .autocomplete-search-box {
 
 #search-button, 
 #go-button {
+  -moz-appearance: toolbarbutton;
   margin-top: 0px;
   margin-bottom: 0px;
   margin-inline-start: 0px;
@@ -499,23 +500,41 @@ panel[nomatch="true"] > .autocomplete-search-box {
   font-weight: bold;
 }
 
+#go-button {
+  list-style-image: url("chrome://navigator/skin/icons/go-arrow.png");
+  -moz-image-region: rect(0px 11px 13px 0px);
+}
+
+#go-button:hover {
+  -moz-image-region: rect(0px 22px 13px 11px);
+  background-position: -26px -1px;
+}
+
+#go-button:hover:active {
+  -moz-image-region: rect(0px 44px 13px 33px);
+  background-position: -76px -1px;
+}
+
 #search-button {
   list-style-image: url("chrome://communicator/skin/icons/search.png");
-  -moz-image-region: rect(0 17px 17px 0);
+  -moz-image-region: rect(0 22px 22px 0);
 }
 
 #search-button:hover {
-  -moz-image-region: rect(0 35px 17px 18px);
+   -moz-image-region: rect(0 44px 22px 22px);
 }
 
 #search-button:hover:active {
-  -moz-image-region: rect(0 53px 17px 36px);
+  -moz-image-region: rect(0 66px 22px 44px);
 }
 
+#go-button > .button-box > .button-icon,
 #search-button > .button-box > .button-icon {
   display: -moz-box;
 }
 
+toolbar[mode="text"] #go-button > .button-box > .button-icon,
+toolbar[mode="icons"] #go-button > .button-box > .button-text,
 toolbar[mode="text"] #search-button > .button-box > .button-icon,
 toolbar[mode="icons"] #search-button > .button-box > .button-text {
   display: none;
