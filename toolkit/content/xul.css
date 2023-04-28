@@ -697,7 +697,7 @@ treecol[hidden="true"] {
 }
 
 /* ::::: lines connecting cells ::::: */
-tree:not([treelines="true"]) > treechildren::-moz-tree-line {
+tree[treelines="false"] > treechildren::-moz-tree-line {
   visibility: hidden;
 }
 
