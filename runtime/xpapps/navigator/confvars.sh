@@ -10,8 +10,8 @@ MOZ_APP_DISPLAYNAME=Mariner
 MOZ_SUITE=1
 BINOC_BOREALIS=1
 BINOC_NAVIGATOR=1
-MOZ_BRANDING_DIRECTORY=runtime/xpapps/navigator/branding/unofficial
-MOZ_OFFICIAL_BRANDING_DIRECTORY=runtime/xpapps/navigator/branding/official
+MOZ_BRANDING_DIRECTORY=runtime/xpapps/navigator/branding
+MOZ_OFFICIAL_BRANDING_DIRECTORY=other-licenses/branding/binoc/mariner/release
 MOZ_EXTENSIONS_DEFAULT=" gio"
 MOZ_UPDATER=1
 # This should usually be the same as the value MAR_CHANNEL_ID.
