@@ -124,7 +124,8 @@
   <toolbox id="placesToolbox">
     <toolbar id="placesToolbar"
              class="chromeclass-toolbar"
-             align="center">
+             align="center"
+             type="menubar">
 #ifdef MOZ_WIDGET_GTK
       <menubar id="placesMenu" 
              _moz-menubarkeeplocal="true">
