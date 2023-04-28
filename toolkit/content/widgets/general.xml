@@ -133,7 +133,7 @@
   <binding id="statusbar" role="xul:statusbar">
     <content>
       <children/>
-      <xul:statusbarpanel class="statusbar-resizerpanel">
+      <xul:statusbarpanel class="statusbar-resizerpanel" ordinal="1000">
         <xul:resizer dir="bottomend"/>
       </xul:statusbarpanel>
     </content>
