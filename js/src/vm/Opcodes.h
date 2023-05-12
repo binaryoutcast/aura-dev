@@ -62,6 +62,7 @@
  *     Super
  *     Arguments
  *     Var Scope
+ *     Modules
  *   [Operators]
  *     Comparison Operators
  *     Arithmetic Operators
@@ -1889,6 +1890,7 @@
     macro(JSOP_UNPICK,        183,"unpick",     NULL,     2,  0,  0,  JOF_UINT8) \
     /*
      * Pops the top of stack value, pushes property of it onto the stack.
+     * Requires the value under 'obj' to be the receiver of the following call.
      *
      * Like JSOP_GETPROP but for call context.
      *   Category: Literals
@@ -1973,7 +1975,8 @@
     \
     /*
      * Pops the top two values on the stack as 'propval' and 'obj', pushes
-     * 'propval' property of 'obj' onto the stack.
+     * 'propval' property of 'obj' onto the stack. Requires the value under
+     * 'obj' to be the receiver of the following call.
      *
      * Like JSOP_GETELEM but for call context.
      *   Category: Literals
@@ -2335,14 +2338,32 @@
      *   Operands: int32_t offset
      *   Stack: cond => cond
      */ \
-    macro(JSOP_COALESCE, 232, "coalesce", NULL, 5, 1, 1, JOF_JUMP|JOF_DETECTING)
+    macro(JSOP_COALESCE, 232, "coalesce", NULL, 5, 1, 1, JOF_JUMP|JOF_DETECTING) \
+    /*
+     * Push "import.meta"
+     *
+     *   Category: Variables and Scopes
+     *   Type: Modules
+     *   Operands:
+     *   Stack: => import.meta
+     */ \
+    macro(JSOP_IMPORTMETA, 233, "importmeta", NULL, 1, 0, 1, JOF_BYTE) \
+    /*
+     * Dynamic import of the module specified by the string value on the top of
+     * the stack.
+     *
+     *   Category: Variables and Scopes
+     *   Type: Modules
+     *   Operands:
+     *   Stack: arg => rval
+     */ \
+    macro(JSOP_DYNAMIC_IMPORT, 234, "call-import", NULL,      1,  1,  1,  JOF_BYTE)
+
 /*
  * In certain circumstances it may be useful to "pad out" the opcode space to
  * a power of two.  Use this macro to do so.
  */
 #define FOR_EACH_TRAILING_UNUSED_OPCODE(macro) \
-    macro(233) \
-    macro(234) \
     macro(235) \
     macro(236) \
     macro(237) \

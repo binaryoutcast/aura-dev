@@ -674,8 +674,13 @@ frontend::CompileLazyFunction(JSContext* cx, Handle<LazyScript*> lazy, const cha
     if (lazy->hasBeenCloned())
         script->setHasBeenCloned();
 
+    FieldInitializers fieldInitializers = FieldInitializers::Invalid();
+    if (fun->kind() == JSFunction::FunctionKind::ClassConstructor) {
+        fieldInitializers = lazy->getFieldInitializers();
+    }
+
     BytecodeEmitter bce(/* parent = */ nullptr, &parser, pn->as<FunctionNode>().funbox(), script, lazy,
-                        pn->pn_pos, BytecodeEmitter::LazyFunction);
+                        pn->pn_pos, BytecodeEmitter::LazyFunction, fieldInitializers);
     if (!bce.init())
         return false;
 
@@ -684,6 +689,13 @@ frontend::CompileLazyFunction(JSContext* cx, Handle<LazyScript*> lazy, const cha
 
     if (!NameFunctions(cx, pn))
         return false;
+
+    // XDR the newly delazified function.
+    if (script->scriptSource()->hasEncoder() &&
+        !script->scriptSource()->xdrEncodeFunction(cx, fun, sourceObject))
+    {
+        return false;
+    }
 
     return true;
 }

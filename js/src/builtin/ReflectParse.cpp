@@ -34,12 +34,6 @@ using mozilla::ArrayLength;
 using mozilla::DebugOnly;
 using mozilla::Forward;
 
-enum class ParseTarget
-{
-    Script,
-    Module
-};
-
 enum ASTType {
     AST_ERROR = -1,
 #define ASTDEF(ast, str, method) ast,
@@ -59,6 +53,8 @@ enum AssignmentOperator {
     AOP_LSH, AOP_RSH, AOP_URSH,
     /* binary */
     AOP_BITOR, AOP_BITXOR, AOP_BITAND,
+    /* short-circuit */
+    AOP_COALESCE, AOP_OR, AOP_AND,
 
     AOP_LIMIT
 };
@@ -128,6 +124,9 @@ static const char* const aopNames[] = {
     "|=",   /* AOP_BITOR */
     "^=",   /* AOP_BITXOR */
     "&="    /* AOP_BITAND */
+    "\?\?=", /* AOP_COALESCE */
+    "||=",  /* AOP_OR */
+    "&&=",  /* AOP_AND */
 };
 
 static const char* const binopNames[] = {
@@ -545,9 +544,12 @@ class NodeBuilder
 
     MOZ_MUST_USE bool classDefinition(bool expr, HandleValue name, HandleValue heritage,
                                       HandleValue block, TokenPos* pos, MutableHandleValue dst);
-    MOZ_MUST_USE bool classMethods(NodeVector& methods, MutableHandleValue dst);
+    MOZ_MUST_USE bool classMembers(NodeVector& members, MutableHandleValue dst);
     MOZ_MUST_USE bool classMethod(HandleValue name, HandleValue body, PropKind kind, bool isStatic,
                                   TokenPos* pos, MutableHandleValue dst);
+    MOZ_MUST_USE bool classField(HandleValue name, HandleValue initializer,
+                                 TokenPos* pos, MutableHandleValue dst);
+    MOZ_MUST_USE bool staticClassBlock(HandleValue body, TokenPos* pos, MutableHandleValue dst);
 
     /*
      * expressions
@@ -622,6 +624,9 @@ class NodeBuilder
 
     MOZ_MUST_USE bool metaProperty(HandleValue meta, HandleValue property, TokenPos* pos,
                                    MutableHandleValue dst);
+
+    MOZ_MUST_USE bool callImportExpression(HandleValue ident, HandleValue arg, TokenPos* pos,
+                                           MutableHandleValue dst);
 
     MOZ_MUST_USE bool super(TokenPos* pos, MutableHandleValue dst);
 
@@ -1724,9 +1729,35 @@ NodeBuilder::classMethod(HandleValue name, HandleValue body, PropKind kind, bool
 }
 
 bool
-NodeBuilder::classMethods(NodeVector& methods, MutableHandleValue dst)
+NodeBuilder::classField(HandleValue name, HandleValue initializer,
+                        TokenPos* pos, MutableHandleValue dst)
 {
-    return newArray(methods, dst);
+    RootedValue cb(cx, callbacks[AST_CLASS_FIELD]);
+    if (!cb.isNull())
+        return callback(cb, name, initializer, pos, dst);
+
+    return newNode(AST_CLASS_FIELD, pos,
+                   "name", name,
+                   "init", initializer,
+                   dst);
+}
+
+bool
+NodeBuilder::staticClassBlock(HandleValue body, TokenPos* pos, MutableHandleValue dst)
+{
+    RootedValue cb(cx, callbacks[AST_STATIC_CLASS_BLOCK]);
+    if (!cb.isNull())
+        return callback(cb, body, pos, dst);
+
+    return newNode(AST_STATIC_CLASS_BLOCK, pos,
+                   "body", body,
+                   dst);
+}
+
+bool
+NodeBuilder::classMembers(NodeVector& members, MutableHandleValue dst)
+{
+    return newArray(members, dst);
 }
 
 bool
@@ -1755,6 +1786,20 @@ NodeBuilder::metaProperty(HandleValue meta, HandleValue property, TokenPos* pos,
     return newNode(AST_METAPROPERTY, pos,
                    "meta", meta,
                    "property", property,
+                   dst);
+}
+
+bool
+NodeBuilder::callImportExpression(HandleValue ident, HandleValue arg, TokenPos* pos,
+                                  MutableHandleValue dst)
+{
+    RootedValue cb(cx, callbacks[AST_CALL_IMPORT]);
+    if (!cb.isNull())
+        return callback(cb, arg, pos, dst);
+
+    return newNode(AST_CALL_IMPORT, pos,
+                   "ident", ident,
+                   "arg", arg,
                    dst);
 }
 
@@ -1842,6 +1887,8 @@ class ASTSerializer
     bool property(ParseNode* pn, MutableHandleValue dst);
 
     bool classMethod(ClassMethod* classMethod, MutableHandleValue dst);
+    bool classField(ClassField* classField, MutableHandleValue dst);
+    bool staticClassBlock(StaticClassBlock* staticClassBlock, MutableHandleValue dst);
 
     bool optIdentifier(HandleAtom atom, TokenPos* pos, MutableHandleValue dst) {
         if (!atom) {
@@ -1932,6 +1979,12 @@ ASTSerializer::aop(JSOp op)
         return AOP_BITXOR;
       case JSOP_BITAND:
         return AOP_BITAND;
+      case JSOP_COALESCE:
+        return AOP_COALESCE;
+      case JSOP_OR:
+        return AOP_OR;
+      case JSOP_AND:
+        return AOP_AND;
       default:
         return AOP_ERR;
     }
@@ -2446,7 +2499,7 @@ ASTSerializer::classDefinition(ClassNode* pn, bool expr, MutableHandleValue dst)
     }
 
     return optExpression(pn->heritage(), &heritage) &&
-           statement(pn->methodList(), &classBody) &&
+           statement(pn->memberList(), &classBody) &&
            builder.classDefinition(expr, className, heritage, classBody, &pn->pn_pos, dst);
 }
 
@@ -2665,24 +2718,43 @@ ASTSerializer::statement(ParseNode* pn, MutableHandleValue dst)
       case PNK_CLASS:
         return classDefinition(&pn->as<ClassNode>(), false, dst);
 
-      case PNK_CLASSMETHODLIST:
+      case PNK_CLASSMEMBERLIST:
       {
-        ListNode* methodList = &pn->as<ListNode>();
-        NodeVector methods(cx);
-        if (!methods.reserve(methodList->count()))
+        ListNode* memberList = &pn->as<ListNode>();
+        NodeVector members(cx);
+        if (!members.reserve(memberList->count()))
             return false;
 
-        for (ParseNode* item : methodList->contents()) {
-            ClassMethod* method = &item->as<ClassMethod>();
-            MOZ_ASSERT(methodList->pn_pos.encloses(method->pn_pos));
+        for (ParseNode* item : memberList->contents()) {
+            if (item->is<LexicalScopeNode>())
+                item = item->as<LexicalScopeNode>().scopeBody();
+            if (item->is<ClassField>()) {
+                ClassField* field = &item->as<ClassField>();
+                MOZ_ASSERT(memberList->pn_pos.encloses(field->pn_pos));
 
-            RootedValue prop(cx);
-            if (!classMethod(method, &prop))
-                return false;
-            methods.infallibleAppend(prop);
+                RootedValue prop(cx);
+                if (!classField(field, &prop))
+                    return false;
+                members.infallibleAppend(prop);
+            } else if (item->is<StaticClassBlock>()) {
+                StaticClassBlock* scb = &item->as<StaticClassBlock>();
+                MOZ_ASSERT(memberList->pn_pos.encloses(scb->pn_pos));
+                RootedValue prop(cx);
+                if (!staticClassBlock(scb, &prop))
+                    return false;
+                members.infallibleAppend(prop);
+            } else {
+                ClassMethod* method = &item->as<ClassMethod>();
+                MOZ_ASSERT(memberList->pn_pos.encloses(method->pn_pos));
+
+                RootedValue prop(cx);
+                if (!classMethod(method, &prop))
+                    return false;
+                members.infallibleAppend(prop);
+            }
         }
 
-        return builder.classMethods(methods, dst);
+        return builder.classMembers(members, dst);
       }
 
       case PNK_NOP:
@@ -2719,6 +2791,47 @@ ASTSerializer::classMethod(ClassMethod* classMethod, MutableHandleValue dst)
     return propertyName(&classMethod->name(), &key) &&
            expression(&classMethod->method(), &val) &&
            builder.classMethod(key, val, kind, isStatic, &classMethod->pn_pos, dst);
+}
+
+bool
+ASTSerializer::classField(ClassField* classField, MutableHandleValue dst)
+{
+    RootedValue key(cx), val(cx);
+    // Dig through the lambda and get to the actual expression
+    ParseNode* value = classField->initializer()
+                           ->body()
+                           ->head()->as<LexicalScopeNode>()
+                           .scopeBody()->as<ListNode>()
+                           .head()->as<UnaryNode>()
+                           .kid()->as<BinaryNode>()
+                           .right();
+    // RawUndefinedExpr is the node we use for "there is no initializer". If one
+    // writes, literally, `x = undefined;`, it will not be a RawUndefinedExpr
+    // node, but rather a variable reference.
+    // Behavior for "there is no initializer" should be { ..., "init": null }
+    if (value->getKind() != PNK_RAW_UNDEFINED) {
+        if (!expression(value, &val))
+          return false;
+    } else {
+        val.setNull();
+    }
+    return propertyName(&classField->name(), &key) &&
+           builder.classField(key, val, &classField->pn_pos, dst);
+}
+
+bool
+ASTSerializer::staticClassBlock(StaticClassBlock* staticClassBlock, MutableHandleValue dst)
+{
+    FunctionNode* fun = staticClassBlock->function();
+
+    NodeVector args(cx);
+    NodeVector defaults(cx);
+
+    RootedValue body(cx), rest(cx);
+    rest.setNull();
+    return functionArgsAndBody(fun->body(), args, defaults, false, false,
+                               &body, &rest) &&
+           builder.staticClassBlock(body, &staticClassBlock->pn_pos, dst);
 }
 
 bool
@@ -3001,6 +3114,9 @@ ASTSerializer::expression(ParseNode* pn, MutableHandleValue dst)
       case PNK_ASSIGN:
       case PNK_ADDASSIGN:
       case PNK_SUBASSIGN:
+      case PNK_COALESCEASSIGN:
+      case PNK_ORASSIGN:
+      case PNK_ANDASSIGN:
       case PNK_BITORASSIGN:
       case PNK_BITXORASSIGN:
       case PNK_BITANDASSIGN:
@@ -3151,7 +3267,7 @@ ASTSerializer::expression(ParseNode* pn, MutableHandleValue dst)
       case PNK_OPTDOT:
       case PNK_DOT:
       {
-        PropertyAccess* prop = &pn->as<PropertyAccess>();
+        PropertyAccessBase* prop = &pn->as<PropertyAccessBase>();
         MOZ_ASSERT(prop->pn_pos.encloses(prop->expression().pn_pos));
 
         RootedValue expr(cx);
@@ -3360,6 +3476,7 @@ ASTSerializer::expression(ParseNode* pn, MutableHandleValue dst)
         return classDefinition(&pn->as<ClassNode>(), true, dst);
 
       case PNK_NEWTARGET:
+      case PNK_IMPORT_META:
       {
         BinaryNode* node = &pn->as<BinaryNode>();
         ParseNode* firstNode = node->left();
@@ -3370,15 +3487,41 @@ ASTSerializer::expression(ParseNode* pn, MutableHandleValue dst)
         MOZ_ASSERT(secondNode->isKind(PNK_POSHOLDER));
         MOZ_ASSERT(node->pn_pos.encloses(secondNode->pn_pos));
 
-        RootedValue newIdent(cx);
-        RootedValue targetIdent(cx);
+        RootedValue firstIdent(cx);
+        RootedValue secondIdent(cx);
 
-        RootedAtom newStr(cx, cx->names().new_);
-        RootedAtom targetStr(cx, cx->names().target);
+        RootedAtom firstStr(cx);
+        RootedAtom secondStr(cx);
 
-        return identifier(newStr, &firstNode->pn_pos, &newIdent) &&
-               identifier(targetStr, &secondNode->pn_pos, &targetIdent) &&
-               builder.metaProperty(newIdent, targetIdent, &node->pn_pos, dst);
+        if (pn->getKind() == PNK_NEWTARGET) {
+            firstStr = cx->names().new_;
+            secondStr = cx->names().target;
+        } else {
+            firstStr = cx->names().import;
+            secondStr = cx->names().meta;
+        }
+
+        return identifier(firstStr, &firstNode->pn_pos, &firstIdent) &&
+               identifier(secondStr, &secondNode->pn_pos, &secondIdent) &&
+               builder.metaProperty(firstIdent, secondIdent, &pn->pn_pos, dst);
+      }
+
+      case PNK_CALL_IMPORT:
+      {
+        BinaryNode* node = &pn->as<BinaryNode>();
+        ParseNode* firstNode = node->left();
+        MOZ_ASSERT(firstNode->isKind(PNK_POSHOLDER));
+        MOZ_ASSERT(pn->pn_pos.encloses(firstNode->pn_pos));
+        ParseNode* secondNode = node->right();
+        MOZ_ASSERT(pn->pn_pos.encloses(secondNode->pn_pos));
+
+        RootedValue ident(cx);
+        RootedValue arg(cx);
+
+        HandlePropertyName name = cx->names().import;
+        return identifier(name, &firstNode->pn_pos, &ident) &&
+               expression(secondNode, &arg) &&
+               builder.callImportExpression(ident, arg, &pn->pn_pos, dst);
       }
 
       case PNK_SETTHIS: {
@@ -3793,7 +3936,7 @@ reflect_parse(JSContext* cx, uint32_t argc, Value* vp)
     uint32_t lineno = 1;
     bool loc = true;
     RootedObject builder(cx);
-    ParseTarget target = ParseTarget::Script;
+    ParseGoal target = ParseGoal::Script;
 
     RootedValue arg(cx, args.get(1));
 
@@ -3881,9 +4024,9 @@ reflect_parse(JSContext* cx, uint32_t argc, Value* vp)
             return false;
 
         if (isScript) {
-            target = ParseTarget::Script;
+            target = ParseGoal::Script;
         } else if (isModule) {
-            target = ParseTarget::Module;
+            target = ParseGoal::Module;
         } else {
             JS_ReportErrorASCII(cx, "Bad target value, expected 'script' or 'module'");
             return false;
@@ -3919,7 +4062,7 @@ reflect_parse(JSContext* cx, uint32_t argc, Value* vp)
     serialize.setParser(&parser);
 
     ParseNode* pn;
-    if (target == ParseTarget::Script) {
+    if (target == ParseGoal::Script) {
         pn = parser.parse();
         if (!pn)
             return false;

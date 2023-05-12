@@ -1,5 +1,4 @@
 /* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * vim: set ts=8 sts=4 et sw=4 tw=99:
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -132,11 +131,11 @@ ElemOpEmitter::emitGet()
 bool
 ElemOpEmitter::prepareForRhs()
 {
-    MOZ_ASSERT(isSimpleAssignment() || isCompoundAssignment());
-    MOZ_ASSERT_IF(isSimpleAssignment(), state_ == State::Key);
+    MOZ_ASSERT(isSimpleAssignment() || isPropInit()|| isCompoundAssignment());
+    MOZ_ASSERT_IF(isSimpleAssignment() || isPropInit(), state_ == State::Key);
     MOZ_ASSERT_IF(isCompoundAssignment(), state_ == State::Get);
 
-    if (isSimpleAssignment()) {
+    if (isSimpleAssignment() || isPropInit()) {
         // For CompoundAssignment, SUPERBASE is already emitted by emitGet.
         if (isSuper()) {
             if (!bce_->emit1(JSOP_SUPERBASE)) {           // THIS KEY SUPERBASE
@@ -155,7 +154,7 @@ bool
 ElemOpEmitter::skipObjAndKeyAndRhs()
 {
     MOZ_ASSERT(state_ == State::Start);
-    MOZ_ASSERT(isSimpleAssignment());
+    MOZ_ASSERT(isSimpleAssignment() || isPropInit());
 
 #ifdef DEBUG
     state_ = State::Rhs;
@@ -203,12 +202,15 @@ ElemOpEmitter::emitDelete()
 bool
 ElemOpEmitter::emitAssignment()
 {
-    MOZ_ASSERT(isSimpleAssignment() || isCompoundAssignment());
+    MOZ_ASSERT(isSimpleAssignment() || isPropInit() || isCompoundAssignment());
     MOZ_ASSERT(state_ == State::Rhs);
 
-    JSOp setOp = isSuper()
-                 ? bce_->sc->strict() ? JSOP_STRICTSETELEM_SUPER : JSOP_SETELEM_SUPER
-                 : bce_->sc->strict() ? JSOP_STRICTSETELEM : JSOP_SETELEM;
+    MOZ_ASSERT_IF(isPropInit(), !isSuper());
+
+    JSOp setOp = isPropInit() ? JSOP_INITELEM
+                              : isSuper()
+                                ? bce_->sc->strict() ? JSOP_STRICTSETELEM_SUPER : JSOP_SETELEM_SUPER
+                                : bce_->sc->strict() ? JSOP_STRICTSETELEM : JSOP_SETELEM;
     if (!bce_->emitElemOpBase(setOp)) {               // ELEM
         return false;
     }

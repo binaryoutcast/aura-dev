@@ -345,8 +345,10 @@ FOR_EACH_PARSENODE_SUBCLASS(DECLARE_AS)
         return new_<ListNode>(PNK_ARGUMENTS, JSOP_NOP, pos);
     }
 
-    BinaryNodeType newSuperCall(Node callee, Node args) {
-        return new_<BinaryNode>(PNK_SUPERCALL, JSOP_SUPERCALL, callee, args);
+    BinaryNodeType newSuperCall(Node callee, Node args, bool isSpread) {
+        JSOp op = isSpread ? JSOP_SPREADSUPERCALL : JSOP_SUPERCALL;
+        TokenPos pos(callee->pn_pos.begin, args->pn_pos.end);
+        return new_<BinaryNode>(PNK_SUPERCALL, op, pos, callee, args);
     }
 
     BinaryNodeType newTaggedTemplate(Node tag, Node args) {
@@ -365,11 +367,13 @@ FOR_EACH_PARSENODE_SUBCLASS(DECLARE_AS)
         return literal;
     }
 
-    ClassNodeType newClass(Node name, Node heritage, Node methodBlock, const TokenPos& pos) {
-        return new_<ClassNode>(name, heritage, methodBlock, pos);
+    ClassNodeType newClass(Node name, Node heritage, LexicalScopeNodeType memberBlock,
+                           const TokenPos& pos)
+    {
+        return new_<ClassNode>(name, heritage, memberBlock, pos);
     }
-    ListNodeType newClassMethodList(uint32_t begin) {
-        return new_<ListNode>(PNK_CLASSMETHODLIST, TokenPos(begin, begin + 1));
+    ListNodeType newClassMemberList(uint32_t begin) {
+        return new_<ListNode>(PNK_CLASSMEMBERLIST, TokenPos(begin, begin + 1));
     }
     ClassNamesType newClassNames(Node outer, Node inner, const TokenPos& pos) {
         return new_<ClassNames>(outer, inner, pos);
@@ -455,19 +459,37 @@ FOR_EACH_PARSENODE_SUBCLASS(DECLARE_AS)
         return true;
     }
 
-    MOZ_MUST_USE bool addClassMethodDefinition(ListNodeType methodList, Node key, FunctionNodeType funNode,
-                                               JSOp op, bool isStatic)
+    MOZ_MUST_USE ClassMethod* newClassMethodDefinition(Node key, FunctionNodeType funNode,
+                                                       JSOp op, bool isStatic)
     {
-        MOZ_ASSERT(methodList->isKind(PNK_CLASSMETHODLIST));
-        MOZ_ASSERT(key->isKind(PNK_NUMBER) ||
-                   key->isKind(PNK_OBJECT_PROPERTY_NAME) ||
-                   key->isKind(PNK_STRING) ||
-                   key->isKind(PNK_COMPUTED_NAME));
+        MOZ_ASSERT(isUsableAsObjectPropertyName(key));
 
-        ClassMethod* classMethod = new_<ClassMethod>(key, funNode, op, isStatic);
-        if (!classMethod)
-            return false;
-        methodList->append(classMethod);
+        return new_<ClassMethod>(key, funNode, op, isStatic);
+    }
+
+    MOZ_MUST_USE ClassField* newClassFieldDefinition(Node name, FunctionNodeType initializer, bool isStatic)
+    {
+        MOZ_ASSERT(isUsableAsObjectPropertyName(name));
+
+        return new_<ClassField>(name, initializer, isStatic);
+    }
+
+    MOZ_MUST_USE StaticClassBlock* newStaticClassBlock(FunctionNodeType block)
+    {
+        return new_<StaticClassBlock>(block);
+    }
+
+    MOZ_MUST_USE bool addClassMemberDefinition(ListNodeType memberList, Node member)
+    {
+        MOZ_ASSERT(memberList->isKind(PNK_CLASSMEMBERLIST));
+        // Constructors can be surrounded by LexicalScopes.
+        MOZ_ASSERT(member->isKind(PNK_CLASSMETHOD) ||
+                   member->isKind(PNK_CLASSFIELD) ||
+                   member->isKind(PNK_STATICCLASSBLOCK) ||
+                   (member->isKind(PNK_LEXICALSCOPE) &&
+                    member->as<LexicalScopeNode>().scopeBody()->isKind(PNK_CLASSMETHOD)));
+
+        addList(/* list = */ memberList, /* kid = */ member);
         return true;
     }
 
@@ -588,6 +610,14 @@ FOR_EACH_PARSENODE_SUBCLASS(DECLARE_AS)
             checkAndSetIsDirectRHSAnonFunction(kid);
         }
         return new_<BinaryNode>(PNK_EXPORT_DEFAULT, JSOP_NOP, pos, kid, maybeBinding);
+    }
+
+    BinaryNodeType newImportMeta(Node importHolder, Node metaHolder) {
+        return new_<BinaryNode>(PNK_IMPORT_META, JSOP_NOP, importHolder, metaHolder);
+    }
+
+    BinaryNodeType newCallImport(Node importHolder, Node singleArg) {
+        return new_<BinaryNode>(PNK_CALL_IMPORT, JSOP_DYNAMIC_IMPORT, importHolder, singleArg);
     }
 
     UnaryNodeType newExprStatement(Node expr, uint32_t end) {
@@ -722,8 +752,8 @@ FOR_EACH_PARSENODE_SUBCLASS(DECLARE_AS)
             pn->setDirectRHSAnonFunction(true);
     }
 
-    FunctionNodeType newFunction(FunctionSyntaxKind syntaxKind) {
-        return new_<FunctionNode>(syntaxKind, pos());
+    FunctionNodeType newFunction(FunctionSyntaxKind syntaxKind, const TokenPos& pos) {
+        return new_<FunctionNode>(syntaxKind, pos);
     }
 
     bool setComprehensionLambdaBody(FunctionNodeType funNode, ListNodeType body) {
@@ -809,6 +839,13 @@ FOR_EACH_PARSENODE_SUBCLASS(DECLARE_AS)
         return node->isKind(PNK_SUPERBASE);
     }
 
+    bool isUsableAsObjectPropertyName(ParseNode* node) {
+        return node->isKind(PNK_NUMBER) ||
+               node->isKind(PNK_OBJECT_PROPERTY_NAME) ||
+               node->isKind(PNK_STRING) ||
+               node->isKind(PNK_COMPUTED_NAME);
+    }
+
     inline MOZ_MUST_USE bool finishInitializerAssignment(NameNodeType nameNode, Node init);
 
     void setBeginPosition(Node pn, Node oth) {
@@ -843,9 +880,9 @@ FOR_EACH_PARSENODE_SUBCLASS(DECLARE_AS)
         return new_<ListNode>(kind, op, pos());
     }
 
-    ListNodeType newList(ParseNodeKind kind, uint32_t begin, JSOp op = JSOP_NOP) {
+    ListNodeType newList(ParseNodeKind kind, const TokenPos& pos, JSOp op = JSOP_NOP) {
         MOZ_ASSERT(!isDeclarationKind(kind));
-        return new_<ListNode>(kind, op, TokenPos(begin, begin + 1));
+        return new_<ListNode>(kind, op, pos);
     }
 
     ListNodeType newList(ParseNodeKind kind, Node kid, JSOp op = JSOP_NOP) {

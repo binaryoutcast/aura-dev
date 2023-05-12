@@ -1292,6 +1292,8 @@ pref("javascript.options.main_thread_stack_quota_cap", 6291456);
 pref("javascript.options.main_thread_stack_quota_cap", 2097152);
 #endif
 
+// Dynamic module import.
+pref("javascript.options.dynamicImport", true);
 
 // advanced prefs
 pref("advanced.mailftp",                    false);
@@ -1360,6 +1362,8 @@ pref("network.protocol-handler.external.shell", false);
 pref("network.protocol-handler.external.vbscript", false);
 pref("network.protocol-handler.external.vnd.ms.radio", false);
 #ifdef XP_WIN
+pref("network.protocol-handler.external.ms-cxh", false);
+pref("network.protocol-handler.external.ms-cxh-full", false);
 pref("network.protocol-handler.external.ms-help", false);
 pref("network.protocol-handler.external.ms-msdt", false);
 pref("network.protocol-handler.external.search", false);

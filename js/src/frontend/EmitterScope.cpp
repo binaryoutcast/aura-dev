@@ -1,5 +1,4 @@
 /* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * vim: set ts=8 sts=4 et sw=4 tw=99:
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -370,7 +369,7 @@ EmitterScope::appendScopeNote(BytecodeEmitter* bce)
 }
 
 bool
-EmitterScope::deadZoneFrameSlotRange(BytecodeEmitter* bce, uint32_t slotStart, uint32_t slotEnd)
+EmitterScope::deadZoneFrameSlotRange(BytecodeEmitter* bce, uint32_t slotStart, uint32_t slotEnd) const
 {
     // Lexical bindings throw ReferenceErrors if they are used before
     // initialization. See ES6 8.1.1.1.6.
@@ -993,7 +992,7 @@ EmitterScope::enterWith(BytecodeEmitter* bce)
 }
 
 bool
-EmitterScope::deadZoneFrameSlots(BytecodeEmitter* bce)
+EmitterScope::deadZoneFrameSlots(BytecodeEmitter* bce) const
 {
     return deadZoneFrameSlotRange(bce, frameSlotStart(), frameSlotEnd());
 }
